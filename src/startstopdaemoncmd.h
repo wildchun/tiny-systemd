@@ -24,6 +24,7 @@ public:
 
     static void setProgramName(const QString &programName);
     static QString programName() ;
+    static bool check();
     explicit StartStopDaemonCmd(const QString &pidFile,
                                 const QString &execFile,
                                 QObject *parent = nullptr);

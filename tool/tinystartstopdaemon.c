@@ -987,7 +987,15 @@ int main(int argc, char **argv) {
         fd = open("/dev/tty", O_RDWR);
         ioctl(fd, TIOCNOTTY, 0);
         close(fd);
-        chdir("/");
+        if (changedir != NULL) {
+            if (chdir(changedir) < 0) {
+                chdir("/");
+            }
+        }else {
+            chdir("/");
+        }
+
+
         umask(022);                     /* set a default for dumb programs */
         setpgid(0, 0);                  /* set the process group */
         fd = open("/dev/null", O_RDWR); /* stdin */

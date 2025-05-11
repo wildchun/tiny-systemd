@@ -52,7 +52,7 @@ Exit status:  0 = done      1 = nothing done (=> 0 if --oknodo)
 
 namespace td {
 
-QString StartStopDaemonCmd::gmProgramName = "start-stop-daemon";
+QString StartStopDaemonCmd::gmProgramName = "tinystartstopdaemon";
 
 void StartStopDaemonCmd::setProgramName(const QString &programName) {
     gmProgramName = programName;
@@ -60,6 +60,24 @@ void StartStopDaemonCmd::setProgramName(const QString &programName) {
 
 QString StartStopDaemonCmd::programName() {
     return gmProgramName;
+}
+
+bool StartStopDaemonCmd::check() {
+    //尝试执行
+    QProcess process;
+    process.setProgram(gmProgramName);
+    process.setArguments(QStringList() << "--version");
+    process.start();
+    process.waitForStarted();
+    process.waitForFinished();
+    auto stdOutput = process.readAllStandardOutput();
+    auto stdError = process.readAllStandardError();
+    process.close();
+    if (process.exitCode() != 0) {
+        qWarning() << "start-stop-daemon not found, please install it";
+        return false;
+    }
+    return true;
 }
 
 StartStopDaemonCmd::StartStopDaemonCmd(const QString &pidFile, const QString &execFile, QObject *parent) :

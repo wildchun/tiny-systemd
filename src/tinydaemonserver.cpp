@@ -58,12 +58,12 @@ TinyDaemonServer::TinyDaemonServer(QObject *parent) :
     QCommandLineParser parser;
     parser.addOption(QCommandLineOption("services_dir", "set services directory", "services_dir", ServiceConfig::serviceDirectory()));
     parser.addOption(QCommandLineOption("pid_dir", "set pid directory", "pid_dir", ServiceConfig::pidDirectory()));
-    parser.addOption(QCommandLineOption("daemon", "set start-stop-daemon program", "daemon", StartStopDaemonCmd::programName()));
+    parser.addOption(QCommandLineOption("daemon_tool", "set start-stop-daemon program", "daemon_tool", StartStopDaemonCmd::programName()));
     parser.parse(QCoreApplication::arguments());
 
     const auto servicesDir = parser.value("services_dir");
     const auto pidDir = parser.value("pid_dir");
-    const auto daemon = parser.value("daemon");
+    const auto daemon = parser.value("daemon_tool");
     qDebug() << " -- use services_dir   :" << servicesDir << "\n"
              << " -- pid_dir            :" << pidDir << "\n"
              << " -- daemon program     :" << daemon;
@@ -84,18 +84,25 @@ void TinyDaemonServer::prepareService() {
     const QDir pidDir(ServiceConfig::pidDirectory());
 
     if (!servicesDir.exists()) {
-        qWarning() << servicesDir.path() << " does not exist, please create it";
+        qWarning() << servicesDir.path() << " not exist, please create it";
         qApp->exit(1);
         return;
     }
     if (!pidDir.exists()) {
-        qDebug() << pidDir.path() << " does not exist, now create it";
+        qDebug() << pidDir.path() << " not exist, now create it";
         if (!pidDir.mkpath(pidDir.path())) {
             qWarning() << pidDir.path() << "create failed, please try run server as root";
             qApp->exit(1);
             return;
         }
     }
+
+    if (!StartStopDaemonCmd::check()) {
+        qWarning() << StartStopDaemonCmd::programName() << " not found, please install it";
+        qApp->exit(1);
+        return;
+    }
+
     QFile daemonFile(pidDir.path() + "/tiny-daemon-server.pid");
     if (daemonFile.exists()) {
         const int pid = readPidFromFile(daemonFile.fileName());
@@ -112,11 +119,6 @@ void TinyDaemonServer::prepareService() {
     }
     daemonFile.write(QString::number(QCoreApplication::applicationPid()).toUtf8());
     daemonFile.close();
-    if (!daemonFile.remove()) {
-        qWarning() << "Failed to remove PID file:" << pidDir.path() + "/tiny-daemon-server.pid";
-        qApp->exit(1);
-        return;
-    }
     startServer();
     reload();
     startDbus();

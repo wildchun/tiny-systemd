@@ -37,10 +37,13 @@ enum DaemonEventId {
     DaemonEventIdAutoStartDisable,
     DaemonEventIdProcessOneshotDead,
 
+    DaemonEventIdExitRestartToStop,
+    DaemonEventIdExitDaemonToStop,
+    DaemonEventIdExitDaemonToStart,
 
     DaemonEventIdUserStart,
-    DaemonEventIdUserStop,
-    DaemonEventIdUserRestart,
+    // DaemonEventIdUserStop,
+    // DaemonEventIdUserRestart,
 };
 class DaemonEventTransition;
 
@@ -102,6 +105,17 @@ public:
 class ServiceProcessDaemon : public QObject {
     Q_OBJECT
 public:
+    enum Status {
+        Inactive = 0,
+        InSetup,
+        InStart,
+        InRestart,
+        InDaemon,
+        InStop,
+        InTerminal,
+    };
+
+    Q_ENUM(Status)
     explicit ServiceProcessDaemon(const ServiceConfig &config, QObject *parent = nullptr);
 
     void setup();
@@ -116,6 +130,7 @@ public:
 private:
     void initMachine();
     void newDaemonEvent(const DaemonEventId id);
+    void killProcess() const;
 private Q_SLOTS:
     void onStaSetupEntry();
     void onStaSetupExit();
@@ -129,11 +144,14 @@ private Q_SLOTS:
     void onStaStopExit();
     void onStaTerminalEntry();
     void onStaTerminalExit();
-
 private Q_SLOTS:
     void onPidDead(int pid);
 
 private:
+
+
+    Status mStatus;
+
     ServiceConfig mConf;
     DaemonMachine mMachine;
     PidFileCat mPid;
@@ -149,6 +167,7 @@ private:
     } mState;
 
     QTimer mRestartTimer;
+    QDateTime mExecFileLastModifiedTime;
 };
 
 }// namespace td
