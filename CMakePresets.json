@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 10,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "linux-x86-default-debug",
+      "hidden": true,
+      "displayName": "Linux x86 Debug(WSl-ubuntu22.04)",
+      "binaryDir": "${sourceDir}/cmake-build-linux-x86-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PLATFORM": "WSL"
+      }
+    },
+    {
+      "name": "linux-arm-cross-default-release",
+      "hidden": true,
+      "displayName": "Linux arm cross Release",
+      "binaryDir": "${sourceDir}/cmake-build-linux-arm-cross-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PLATFORM": "SCU"
+      }
+    }
+  ]
+}
