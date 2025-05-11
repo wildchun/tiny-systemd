@@ -21,7 +21,9 @@ include_directories(
 
 add_executable(tinysystemd ${SRCS} cmd/tiny_systemd.cpp)
 add_executable(tinysystemctl ${SRCS} cmd/tiny_system_ctl.cpp)
+add_executable(tiny_exe_simple cmd/tiny_exe_simple.cpp)
 
 
 set_target_properties(tinysystemd PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH_ROOT})
 set_target_properties(tinysystemctl PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH_ROOT})
+set_target_properties(tiny_exe_simple PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH_ROOT})

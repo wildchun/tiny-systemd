@@ -23,12 +23,15 @@ public:
     };
 
     static void setProgramName(const QString &programName);
+    static QString programName() ;
     explicit StartStopDaemonCmd(const QString &pidFile,
                                 const QString &execFile,
                                 QObject *parent = nullptr);
     StartStopDaemonCmd *withExecWorkingDirectory(const QString &workingDirectory);
+    StartStopDaemonCmd *withArgs(const QStringList &args) ;
     bool startDaemon();
     bool stopDaemon();
+    QString executeCommand() const;
 
 private:
     StatusCode execProcess(const QStringList &args);
@@ -38,6 +41,7 @@ private:
     QString mExecFile;
     QString mExecWorkingDirectory;
     QString mCommand;
+    QStringList mArgs;
     int mPid;
 };
 

@@ -58,6 +58,10 @@ void StartStopDaemonCmd::setProgramName(const QString &programName) {
     gmProgramName = programName;
 }
 
+QString StartStopDaemonCmd::programName() {
+    return gmProgramName;
+}
+
 StartStopDaemonCmd::StartStopDaemonCmd(const QString &pidFile, const QString &execFile, QObject *parent) :
     QProcess(parent),
     mPidFile(pidFile),
@@ -67,6 +71,11 @@ StartStopDaemonCmd::StartStopDaemonCmd(const QString &pidFile, const QString &ex
 
 StartStopDaemonCmd *StartStopDaemonCmd::withExecWorkingDirectory(const QString &workingDirectory) {
     mExecWorkingDirectory = workingDirectory;
+    return this;
+}
+
+StartStopDaemonCmd *StartStopDaemonCmd::withArgs(const QStringList &args) {
+    mArgs = args;
     return this;
 }
 
@@ -101,6 +110,12 @@ bool StartStopDaemonCmd::startDaemon() {
     if (!mExecWorkingDirectory.isEmpty()) {
         args << "--chdir" << mExecWorkingDirectory;//  工作目录
     }
+    if (!mArgs.isEmpty()) {
+        args << "--";
+        for (const auto &arg: mArgs) {
+            args << arg;
+        }
+    }
     const auto code = execProcess(args);
     return code == Done || code == NothingDone;
 }
@@ -111,6 +126,10 @@ bool StartStopDaemonCmd::stopDaemon() {
          << "--pidfile" << mPidFile;//  pid路径
     const auto code = execProcess(args);
     return code == Done || code == NothingDone;
+}
+
+QString StartStopDaemonCmd::executeCommand() const {
+    { return mCommand; }
 }
 
 }// namespace td

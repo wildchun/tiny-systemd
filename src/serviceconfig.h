@@ -46,26 +46,20 @@ public:
     ServiceConfig();
     ~ServiceConfig();
 
-    QString serviceName() const { return mServiceName; }
-
-    QString executedFile() const { return mServiceExecStart; }
-
-    QString workingDirectory() const { return mServiceWorkingDirectory; }
-
+    QString serviceName() const;
+    QString serviceFile() const;
+    QString description() const;
+    QString executedFile() const;
+    QString contextFile() const;
+    QString workingDirectory() const;
+    QStringList arguments() const;
     AutoRestartType autoRestartType() const;
-
-    int restartSec() const { return mServiceRestartSec; }
-
-    bool enabled() const { return mEnabled; }
-
+    int restartSec() const;
+    bool enabled() const;
     QString pidLockFileName() const;
-
     bool loadFromSettings(const QString &fileName);
-
     bool isSame(const ServiceConfig &other) const;
-
     int priority() const;
-
     Type type() const;
 
 private:
@@ -81,7 +75,9 @@ private:
     QString mServiceFile;
     QString mServiceName;
     QString mPidLockFileName;
+    QString mContextFileName;
     QString mError;
+    QStringList mServiceArgs;
 };
 
 class ServiceConfigLoader {

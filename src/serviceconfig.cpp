@@ -12,6 +12,38 @@
 
 namespace td {
 
+static QStringList parseArgInputLine(const QString &arg) {
+    QStringList args;
+    QString buf;
+    bool inQuote = false;
+    for (auto i = 0; i < arg.size(); ++i) {
+        if (arg.at(i) == '\"') {
+            inQuote = !inQuote;
+            continue;
+        }
+        if (arg.at(i) == ' ' && !inQuote) {
+            if (!buf.isEmpty()) {
+                args.append(buf);
+                buf.clear();
+            }
+            continue;
+        }
+        if (arg.at(i) == '\\') {
+            i++;
+            if (i >= arg.size()) {
+                break;
+            }
+        }
+        buf.append(arg.at(i));
+    }
+    if (inQuote) {
+        return {};
+    }
+    if (!buf.isEmpty()) {
+        args.append(buf);
+    }
+    return args;
+}
 
 int readPidFromFile(const QString &pidFileName) {
     QFile pidFile(pidFileName);
@@ -74,12 +106,35 @@ ServiceConfig::ServiceConfig() :
     mEnabled(false), mPriority(0) {
 }
 
-ServiceConfig::~ServiceConfig() {
+ServiceConfig::~ServiceConfig() = default;
+
+QString ServiceConfig::serviceName() const { return mServiceName; }
+
+QString ServiceConfig::serviceFile() const { return mServiceFile; }
+
+QString ServiceConfig::description() const {
+    return mUnitDescription;
+}
+
+QString ServiceConfig::executedFile() const { return mServiceExecStart; }
+
+QString ServiceConfig::contextFile() const {
+        return mContextFileName;
+}
+
+QString ServiceConfig::workingDirectory() const { return mServiceWorkingDirectory; }
+
+QStringList ServiceConfig::arguments() const {
+    return mServiceArgs;
 }
 
 ServiceConfig::AutoRestartType ServiceConfig::autoRestartType() const {
     return mAutoRestartType;
 }
+
+int ServiceConfig::restartSec() const { return mServiceRestartSec; }
+
+bool ServiceConfig::enabled() const { return mEnabled; }
 
 QString ServiceConfig::pidLockFileName() const {
     return mPidLockFileName;
@@ -105,7 +160,6 @@ bool ServiceConfig::loadFromSettings(const QString &fileName) {
         return false;
     }
 
-
     mUnitDescription = settings.value("Unit/Description").toString();
 
     const auto serviceType = settings.value("Service/Type").toString();
@@ -115,9 +169,24 @@ bool ServiceConfig::loadFromSettings(const QString &fileName) {
     }
     mServiceType = kServiceTypeMap.value(serviceType, ServiceConfig::Simple);
 
-    mServiceExecStart = settings.value("Service/ExecStart").toString();
+    const auto serviceExecStart = settings.value("Service/ExecStart").toString();
+    // 解析参数 <bin> <arg1> <arg2>
+    const auto args = parseArgInputLine(serviceExecStart);
+    if (args.isEmpty()) {
+        mError = QString("Service ExecStart is not valid");
+        return false;
+    }
+    mServiceExecStart = args.at(0);
+    if (args.size() > 1) {
+        mServiceArgs = args.mid(1);
+    }
     mServiceWorkingDirectory = settings.value("Service/WorkingDirectory", "/").toString();
 
+    const QFileInfo fileInfo(mServiceExecStart);
+    if (!fileInfo.exists() || !fileInfo.isExecutable()) {
+        mError = QString("Service Bin %1 is not exist or not executable").arg(mServiceExecStart);
+        return false;
+    }
     // 重启策略
     const auto serviceRestart = settings.value("Service/Restart").toString();
     mServiceRestartSec = settings.value("Service/RestartSec", "5").toInt();
@@ -135,6 +204,7 @@ bool ServiceConfig::loadFromSettings(const QString &fileName) {
     mServiceFile = fileName;
     mServiceName = QFileInfo(fileName).fileName();
     mPidLockFileName = QDir(gPidDirectory).absoluteFilePath(mServiceName + ".pid");
+    mContextFileName = QDir(gPidDirectory).absoluteFilePath(mServiceName + ".context");
     mError.clear();
     return true;
 }

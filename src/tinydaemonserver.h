@@ -7,12 +7,10 @@
 #define TINYDAEMONSERVER_H
 
 #include "serviceconfig.h"
-#include "serviceprocess.h"
-
-#include <QFileSystemWatcher>
 #include <QHash>
 #include <QLocalServer>
 #include <QObject>
+#include <serviceprocessdaemon.h>
 
 namespace td {
 
@@ -39,7 +37,7 @@ private:
     static QHash<QString, ServiceConfig> loadServiceConfigs();
 
 private:
-    QHash<QString, ServiceProcess *> mServiceProcesses;
+    QHash<QString, ServiceProcessDaemon *> mServiceProcesses;
     QLocalServer *mServer;
 
     QTimer mFeedDogTimer;

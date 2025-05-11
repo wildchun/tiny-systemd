@@ -18,7 +18,7 @@
 
 namespace td {
 
-QStringList parseArgInputLine(const QString &arg) {
+static QStringList parseArgInputLine(const QString &arg) {
     QStringList args;
     QString buf;
     bool inQuote = false;
@@ -56,9 +56,9 @@ TinyDaemonServer::TinyDaemonServer(QObject *parent) :
     mServer(nullptr) {
 
     QCommandLineParser parser;
-    parser.addOption(QCommandLineOption("services_dir", "set services directory", "services_dir", "/etc/tiny_daemon/services"));
-    parser.addOption(QCommandLineOption("pid_dir", "set pid directory", "pid_dir", "/var/run/tiny_daemon"));
-    parser.addOption(QCommandLineOption("daemon", "set start-stop-daemon program", "daemon", "start-stop-daemon"));
+    parser.addOption(QCommandLineOption("services_dir", "set services directory", "services_dir", ServiceConfig::serviceDirectory()));
+    parser.addOption(QCommandLineOption("pid_dir", "set pid directory", "pid_dir", ServiceConfig::pidDirectory()));
+    parser.addOption(QCommandLineOption("daemon", "set start-stop-daemon program", "daemon", StartStopDaemonCmd::programName()));
     parser.parse(QCoreApplication::arguments());
 
     const auto servicesDir = parser.value("services_dir");
@@ -67,6 +67,7 @@ TinyDaemonServer::TinyDaemonServer(QObject *parent) :
     qDebug() << " -- use services_dir   :" << servicesDir << "\n"
              << " -- pid_dir            :" << pidDir << "\n"
              << " -- daemon program     :" << daemon;
+
     ServiceConfig::setServiceDirectory(servicesDir);
     ServiceConfig::setPidDirectory(pidDir);
     StartStopDaemonCmd::setProgramName(daemon);
@@ -76,8 +77,7 @@ TinyDaemonServer::TinyDaemonServer(QObject *parent) :
     mFeedDogTimer.start();
 }
 
-TinyDaemonServer::~TinyDaemonServer() {
-}
+TinyDaemonServer::~TinyDaemonServer() = default;
 
 void TinyDaemonServer::prepareService() {
     const QDir servicesDir(ServiceConfig::serviceDirectory());
@@ -147,7 +147,7 @@ QHash<QString, ServiceConfig> TinyDaemonServer::loadServiceConfigs() {
 }
 
 void TinyDaemonServer::reload() {
-    QVector<ServiceProcess *> newProcesses;
+    QVector<ServiceProcessDaemon *> newProcesses;
 
     const auto newServiceConfigs = loadServiceConfigs();
     for (auto newIt = newServiceConfigs.constBegin();
@@ -160,7 +160,7 @@ void TinyDaemonServer::reload() {
         } else {
             //新增
             qDebug() << "New service config:" << serviceName;
-            const auto proc = new ServiceProcess(newIt.value());
+            const auto proc = new ServiceProcessDaemon(newIt.value());
             mServiceProcesses.insert(serviceName, proc);
             newProcesses.append(proc);
         }
@@ -180,7 +180,7 @@ void TinyDaemonServer::reload() {
     if (newProcesses.isEmpty()) {
         return;
     }
-    std::sort(newProcesses.begin(), newProcesses.end(), [](ServiceProcess *first, ServiceProcess *last) {
+    std::sort(newProcesses.begin(), newProcesses.end(), [](ServiceProcessDaemon *first, ServiceProcessDaemon *last) {
         return first->serviceConfig().priority() < last->serviceConfig().priority();
     });
     for (const auto proc: newProcesses) {
@@ -237,7 +237,7 @@ void TinyDaemonServer::onSystemPowerDownOrReboot() {
 }
 
 void TinyDaemonServer::onFeedDog() {
-    ::system("echo V > /dev/watchdog");
+    ::system("echo V > /dev/watchdog >/dev/null 2>&1");
 }
 
 void TinyDaemonServer::onServerNewConnection() {
@@ -300,15 +300,7 @@ void TinyDaemonServer::executeClientCommand(QLocalSocket *socket, const QStringL
              it != mServiceProcesses.constEnd();
              ++it) {
             const auto proc = it.value();
-            auto conf = proc->serviceConfig();
-            out << "[" << ++idx << "] " << it.key() << "\n";
-            out << "  name:" << conf.serviceName() << "\n";
-            out << "  exec:" << conf.executedFile() << "\n";
-            out << "  work dir:" << conf.workingDirectory() << "\n";
-            out << "  enabled:" << conf.enabled() << "\n";
-            out << "  restart interval:" << conf.restartSec() << "\n";
-            out << "  pid:" << proc->procStatus().pid << "\n";
-            out << "  alive:" << proc->procStatus().procAlive << "\n";
+            proc->status(out);
         }
         return;
     }
@@ -332,32 +324,13 @@ void TinyDaemonServer::executeClientCommand(QLocalSocket *socket, const QStringL
     }
     const auto proc = mServiceProcesses.value(serviceName);
     if (command == "start") {
-        if (proc->start()) {
-            out << "Service started successfully\n";
-        } else {
-            out << "Failed to start service\n";
-        }
+        proc->userStart(out);
     } else if (command == "stop") {
-        if (proc->stop()) {
-            out << "Service stopped successfully\n";
-        } else {
-            out << "Failed to stop service\n";
-        }
+        proc->userStop(out);
     } else if (command == "restart") {
-        if (proc->restart()) {
-            out << "Service restarted successfully\n";
-        } else {
-            out << "Failed to restart service\n";
-        }
+        proc->userRestart(out);
     } else if (command == "status") {
-        const auto conf = proc->serviceConfig();
-        out << "  name:" << conf.serviceName() << "\n";
-        out << "  exec:" << conf.executedFile() << "\n";
-        out << "  work dir:" << conf.workingDirectory() << "\n";
-        out << "  enabled:" << conf.enabled() << "\n";
-        out << "  restart interval:" << conf.restartSec() << "\n";
-        out << "  pid:" << proc->procStatus().pid << "\n";
-        out << "  alive:" << proc->procStatus().procAlive << "\n";
+        proc->status(out);
     } else {
         out << "Unknown command: " << command << "\n"
             << helpText;
