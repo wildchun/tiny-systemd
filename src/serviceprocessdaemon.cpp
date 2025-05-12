@@ -178,7 +178,29 @@ void ServiceProcessDaemon::status(QTextStream &out) {
         out << "active (running) since " << mPidContext.lastStartTime().toString("yyyy-MM-dd hh:mm:ss") << "\n";
         out << "  Main PID: " << mPid.pid() << " (" << mConf.executedFile() << " " << mConf.arguments().join(' ') << ")\n";
     } else {
-        out << "inactive (dead)\n";
+        switch (mStatus) {
+            case Inactive:
+                out << "inactive (dead, in terminal)\n";
+                break;
+            case InSetup:
+                out << "inactive (dead, in setup)\n";
+                break;
+            case InStart:
+                out << "inactive (dead, in restart)\n";
+                break;
+            case InRestart:
+                out << "inactive (dead, wait restart)\n";
+                break;
+            case InDaemon:
+                out << "inactive (dead, bug!!: in daemon)\n";
+                break;
+            case InStop:
+                out << "inactive (dead, in stop mode)\n";
+                break;
+            case InTerminal:
+                out << "inactive (dead, in terminal)\n";
+                break;
+        }
     }
 }
 
