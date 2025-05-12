@@ -239,7 +239,7 @@ void TinyDaemonServer::onSystemPowerDownOrReboot() {
 }
 
 void TinyDaemonServer::onFeedDog() {
-    ::system("echo V > /dev/watchdog >/dev/null 2>&1");
+    ::system("echo V > /dev/watchdog");
 }
 
 void TinyDaemonServer::onServerNewConnection() {
